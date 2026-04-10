@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agendar Visita — Smarthome Panamá</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Inter,sans-serif;background:#0a0a0a;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;}
+.bk{max-width:600px;width:100%;color:#f0f0f0;}
+.step{display:none;}.step.active{display:block;}
+.lbl{font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#888;margin-bottom:10px;display:block;}
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.cal-title{font-size:16px;font-weight:500;color:#f0f0f0;}
+.cal-nav{width:36px;height:36px;border:1px solid #333;border-radius:8px;background:#1a1a1a;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#888;font-size:20px;line-height:1;transition:border-color 0.15s,color 0.15s;}
+.cal-nav:hover{border-color:#007aff;color:#007aff;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:1.5rem;}
+.cal-day-name{height:30px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#555;letter-spacing:0.04em;}
+.cal-day{height:44px;display:flex;align-items:center;justify-content:center;font-size:14px;border-radius:8px;cursor:pointer;color:#ccc;transition:all 0.15s;}
+.cal-day:hover:not(.disabled):not(.empty){background:#1e2d45;color:#007aff;}
+.cal-day.disabled{color:#333;cursor:default;pointer-events:none;}
+.cal-day.empty{cursor:default;}
+.cal-day.selected{background:#007aff;color:#fff;font-weight:500;}
+.slots-col-wrap{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;}
+.slots-col-title{font-size:11px;font-weight:500;color:#888;margin-bottom:8px;letter-spacing:0.06em;text-transform:uppercase;}
+.slots-col{display:flex;flex-direction:column;gap:8px;}
+.slot{height:42px;border:1px solid #2a2a2a;border-radius:8px;background:#1a1a1a;font-size:14px;font-weight:500;color:#888;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.slot:hover{border-color:#007aff;color:#007aff;background:#0d1f35;}
+.slot.selected{background:#007aff;border-color:#007aff;color:#fff;}
+.date-banner{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:12px 16px;margin-bottom:1.25rem;font-size:14px;color:#888;display:flex;align-items:center;gap:8px;}
+.date-banner strong{color:#f0f0f0;font-weight:500;}
+.date-banner .edit{margin-left:auto;font-size:12px;color:#007aff;cursor:pointer;font-weight:500;}
+.field{margin-bottom:1.1rem;}
+.field label{display:block;font-size:11px;font-weight:500;color:#888;margin-bottom:5px;letter-spacing:0.06em;text-transform:uppercase;}
+.field input{width:100%;height:46px;border:1px solid #2a2a2a;border-radius:10px;padding:0 14px;font-size:15px;color:#f0f0f0;background:#1a1a1a;outline:none;transition:border-color 0.15s,box-shadow 0.15s;}
+.field input::placeholder{color:#444;}
+.field input:focus{border-color:#007aff;box-shadow:0 0 0 3px rgba(0,122,255,0.15);}
+.phone-wrap{position:relative;display:flex;gap:8px;}
+.country-btn{height:46px;border:1px solid #2a2a2a;border-radius:10px;padding:0 12px;font-size:14px;color:#f0f0f0;background:#1a1a1a;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;min-width:115px;transition:border-color 0.15s;}
+.country-btn:hover{border-color:#007aff;}
+.country-btn .arrow{color:#555;font-size:10px;margin-left:auto;}
+.phone-number{flex:1;height:46px;border:1px solid #2a2a2a;border-radius:10px;padding:0 14px;font-size:15px;color:#f0f0f0;background:#1a1a1a;outline:none;transition:border-color 0.15s,box-shadow 0.15s;}
+.phone-number::placeholder{color:#444;}
+.phone-number:focus{border-color:#007aff;box-shadow:0 0 0 3px rgba(0,122,255,0.15);}
+.country-dropdown{display:none;position:absolute;top:50px;left:0;width:340px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;z-index:100;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.6);}
+.country-dropdown.open{display:block;}
+.country-search-wrap{position:relative;}
+.country-search{width:100%;height:44px;background:#111;border:none;border-bottom:1px solid #2a2a2a;padding:0 14px 0 40px;font-size:14px;color:#f0f0f0;outline:none;}
+.country-search::placeholder{color:#555;}
+.search-icon{position:absolute;top:13px;left:14px;color:#555;font-size:15px;pointer-events:none;}
+.country-list{max-height:260px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#333 transparent;}
+.country-list::-webkit-scrollbar{width:4px;}
+.country-list::-webkit-scrollbar-thumb{background:#333;border-radius:2px;}
+.country-item{padding:9px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;color:#ccc;transition:background 0.1s;}
+.country-item:hover{background:#222;}
+.country-item.active{background:#0d1f35;color:#007aff;}
+.ci-flag{font-size:18px;width:26px;text-align:center;flex-shrink:0;}
+.ci-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ci-code{color:#555;font-size:13px;flex-shrink:0;}
+.divider{height:1px;background:#222;margin:1.5rem 0;}
+.btn{width:100%;height:52px;background:#007aff;border:none;border-radius:26px;color:#fff;font-size:15px;font-weight:500;cursor:pointer;transition:background 0.15s;}
+.btn:hover{background:#005fcc;}
+.btn:disabled{background:#1e1e1e;color:#444;cursor:not-allowed;border:1px solid #2a2a2a;}
+.btn-back{width:100%;height:44px;background:transparent;border:1px solid #2a2a2a;border-radius:22px;color:#888;font-size:14px;cursor:pointer;margin-top:10px;transition:border-color 0.15s;}
+.btn-back:hover{border-color:#555;}
+.progress{display:flex;gap:6px;margin-bottom:1.75rem;}
+.prog{height:3px;border-radius:2px;background:#222;flex:1;transition:background 0.3s;}
+.prog.done{background:#007aff;}
+.success{text-align:center;padding:3rem 1rem;}
+.check-circle{width:64px;height:64px;background:#0d2b1a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;border:1px solid #1a4a2e;}
+.success h3{font-size:22px;font-weight:500;color:#f0f0f0;margin-bottom:8px;}
+.success p{font-size:14px;color:#888;line-height:1.6;}
+.summary{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:16px 20px;margin:1rem 0;font-size:14px;color:#888;text-align:left;line-height:2;}
+.summary strong{color:#f0f0f0;font-weight:500;font-size:16px;display:block;margin-bottom:4px;}
+</style>
+</head>
+<body>
+<div class="bk">
+  <div class="progress">
+    <div class="prog done" id="p1"></div>
+    <div class="prog" id="p2"></div>
+    <div class="prog" id="p3"></div>
+  </div>
+
+  <div class="step active" id="step1">
+    <span class="lbl">Seleccione una fecha</span>
+    <div class="cal-header">
+      <button class="cal-nav" id="prev-m">&#8249;</button>
+      <div class="cal-title" id="cal-title"></div>
+      <button class="cal-nav" id="next-m">&#8250;</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+
+  <div class="step" id="step2">
+    <div class="date-banner"><span id="b1"></span><span class="edit" onclick="goStep(1)">Cambiar fecha</span></div>
+    <span class="lbl">Seleccione una hora</span>
+    <div class="slots-col-wrap">
+      <div>
+        <div class="slots-col-title">Mañana</div>
+        <div class="slots-col" id="morning-slots"></div>
+      </div>
+      <div>
+        <div class="slots-col-title">Tarde</div>
+        <div class="slots-col" id="afternoon-slots"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" id="step3">
+    <div class="date-banner"><span id="b2"></span><span class="edit" onclick="goStep(1)">Cambiar</span></div>
+    <div class="field">
+      <label>Nombre completo</label>
+      <input type="text" id="nombre" placeholder="Su nombre completo" autocomplete="name">
+    </div>
+    <div class="field">
+      <label>Correo electrónico</label>
+      <input type="email" id="email" placeholder="correo@ejemplo.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Teléfono / WhatsApp</label>
+      <div class="phone-wrap">
+        <button class="country-btn" id="country-btn" type="button">
+          <span id="sel-flag">🇵🇦</span>
+          <span id="sel-code">+507</span>
+          <span class="arrow">▼</span>
+        </button>
+        <div class="country-dropdown" id="country-dd">
+          <div class="country-search-wrap">
+            <span class="search-icon">&#128269;</span>
+            <input class="country-search" id="country-search" placeholder="Buscar país..." autocomplete="off">
+          </div>
+          <div class="country-list" id="country-list"></div>
+        </div>
+        <input type="tel" class="phone-number" id="telefono" placeholder="6000-0000" autocomplete="tel">
+      </div>
+    </div>
+    <div class="divider"></div>
+    <button class="btn" id="submit-btn" disabled onclick="handleSubmit()">Confirmar solicitud</button>
+    <button class="btn-back" onclick="goStep(2)">Volver</button>
+  </div>
+
+  <div class="step" id="step4">
+    <div class="success">
+      <div class="check-circle">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h3>¡Solicitud enviada!</h3>
+      <div class="summary" id="summary"></div>
+      <p>Le confirmaremos su cita a la brevedad por correo electrónico.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS_S=['Lu','Ma','Mi','Ju','Vi','Sá','Do'];
+const DAYS_L=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const MORNING=['09:00','09:30','10:00','10:30','11:00','11:30'];
+const AFTERNOON=['12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00'];
+
+const COUNTRIES=[
+  {n:'Panamá',f:'🇵🇦',c:'+507',iso:'PA'},
+  {n:'Afghanistan',f:'🇦🇫',c:'+93',iso:'AF'},
+  {n:'Åland Islands',f:'🇦🇽',c:'+358',iso:'AX'},
+  {n:'Albania',f:'🇦🇱',c:'+355',iso:'AL'},
+  {n:'Algeria',f:'🇩🇿',c:'+213',iso:'DZ'},
+  {n:'American Samoa',f:'🇦🇸',c:'+1',iso:'AS'},
+  {n:'Andorra',f:'🇦🇩',c:'+376',iso:'AD'},
+  {n:'Angola',f:'🇦🇴',c:'+244',iso:'AO'},
+  {n:'Anguilla',f:'🇦🇮',c:'+1',iso:'AI'},
+  {n:'Antigua & Barbuda',f:'🇦🇬',c:'+1',iso:'AG'},
+  {n:'Argentina',f:'🇦🇷',c:'+54',iso:'AR'},
+  {n:'Armenia',f:'🇦🇲',c:'+374',iso:'AM'},
+  {n:'Aruba',f:'🇦🇼',c:'+297',iso:'AW'},
+  {n:'Ascension Island',f:'🇸🇭',c:'+247',iso:'SH'},
+  {n:'Australia',f:'🇦🇺',c:'+61',iso:'AU'},
+  {n:'Austria',f:'🇦🇹',c:'+43',iso:'AT'},
+  {n:'Azerbaijan',f:'🇦🇿',c:'+994',iso:'AZ'},
+  {n:'Bahamas',f:'🇧🇸',c:'+1',iso:'BS'},
+  {n:'Bahrain',f:'🇧🇭',c:'+973',iso:'BH'},
+  {n:'Bangladesh',f:'🇧🇩',c:'+880',iso:'BD'},
+  {n:'Barbados',f:'🇧🇧',c:'+1',iso:'BB'},
+  {n:'Belarus',f:'🇧🇾',c:'+375',iso:'BY'},
+  {n:'Belgium',f:'🇧🇪',c:'+32',iso:'BE'},
+  {n:'Belize',f:'🇧🇿',c:'+501',iso:'BZ'},
+  {n:'Benin',f:'🇧🇯',c:'+229',iso:'BJ'},
+  {n:'Bermuda',f:'🇧🇲',c:'+1',iso:'BM'},
+  {n:'Bhutan',f:'🇧🇹',c:'+975',iso:'BT'},
+  {n:'Bolivia',f:'🇧🇴',c:'+591',iso:'BO'},
+  {n:'Bosnia & Herzegovina',f:'🇧🇦',c:'+387',iso:'BA'},
+  {n:'Botswana',f:'🇧🇼',c:'+267',iso:'BW'},
+  {n:'Brazil',f:'🇧🇷',c:'+55',iso:'BR'},
+  {n:'British Indian Ocean Territory',f:'🇮🇴',c:'+246',iso:'IO'},
+  {n:'British Virgin Islands',f:'🇻🇬',c:'+1',iso:'VG'},
+  {n:'Brunei',f:'🇧🇳',c:'+673',iso:'BN'},
+  {n:'Bulgaria',f:'🇧🇬',c:'+359',iso:'BG'},
+  {n:'Burkina Faso',f:'🇧🇫',c:'+226',iso:'BF'},
+  {n:'Burundi',f:'🇧🇮',c:'+257',iso:'BI'},
+  {n:'Cambodia',f:'🇰🇭',c:'+855',iso:'KH'},
+  {n:'Cameroon',f:'🇨🇲',c:'+237',iso:'CM'},
+  {n:'Canada',f:'🇨🇦',c:'+1',iso:'CA'},
+  {n:'Cape Verde',f:'🇨🇻',c:'+238',iso:'CV'},
+  {n:'Caribbean Netherlands',f:'🇧🇶',c:'+599',iso:'BQ'},
+  {n:'Cayman Islands',f:'🇰🇾',c:'+1',iso:'KY'},
+  {n:'Central African Republic',f:'🇨🇫',c:'+236',iso:'CF'},
+  {n:'Chad',f:'🇹🇩',c:'+235',iso:'TD'},
+  {n:'Chile',f:'🇨🇱',c:'+56',iso:'CL'},
+  {n:'China',f:'🇨🇳',c:'+86',iso:'CN'},
+  {n:'Christmas Island',f:'🇨🇽',c:'+61',iso:'CX'},
+  {n:'Cocos (Keeling) Islands',f:'🇨🇨',c:'+61',iso:'CC'},
+  {n:'Colombia',f:'🇨🇴',c:'+57',iso:'CO'},
+  {n:'Comoros',f:'🇰🇲',c:'+269',iso:'KM'},
+  {n:'Congo - Brazzaville',f:'🇨🇬',c:'+242',iso:'CG'},
+  {n:'Congo - Kinshasa',f:'🇨🇩',c:'+243',iso:'CD'},
+  {n:'Cook Islands',f:'🇨🇰',c:'+682',iso:'CK'},
+  {n:'Costa Rica',f:'🇨🇷',c:'+506',iso:'CR'},
+  {n:'Côte d\'Ivoire',f:'🇨🇮',c:'+225',iso:'CI'},
+  {n:'Croatia',f:'🇭🇷',c:'+385',iso:'HR'},
+  {n:'Cuba',f:'🇨🇺',c:'+53',iso:'CU'},
+  {n:'Curaçao',f:'🇨🇼',c:'+599',iso:'CW'},
+  {n:'Cyprus',f:'🇨🇾',c:'+357',iso:'CY'},
+  {n:'Czechia',f:'🇨🇿',c:'+420',iso:'CZ'},
+  {n:'Denmark',f:'🇩🇰',c:'+45',iso:'DK'},
+  {n:'Djibouti',f:'🇩🇯',c:'+253',iso:'DJ'},
+  {n:'Dominica',f:'🇩🇲',c:'+1',iso:'DM'},
+  {n:'Dominican Republic',f:'🇩🇴',c:'+1',iso:'DO'},
+  {n:'Ecuador',f:'🇪🇨',c:'+593',iso:'EC'},
+  {n:'Egypt',f:'🇪🇬',c:'+20',iso:'EG'},
+  {n:'El Salvador',f:'🇸🇻',c:'+503',iso:'SV'},
+  {n:'Equatorial Guinea',f:'🇬🇶',c:'+240',iso:'GQ'},
+  {n:'Eritrea',f:'🇪🇷',c:'+291',iso:'ER'},
+  {n:'Estonia',f:'🇪🇪',c:'+372',iso:'EE'},
+  {n:'Eswatini',f:'🇸🇿',c:'+268',iso:'SZ'},
+  {n:'Ethiopia',f:'🇪🇹',c:'+251',iso:'ET'},
+  {n:'Falkland Islands',f:'🇫🇰',c:'+500',iso:'FK'},
+  {n:'Faroe Islands',f:'🇫🇴',c:'+298',iso:'FO'},
+  {n:'Fiji',f:'🇫🇯',c:'+679',iso:'FJ'},
+  {n:'Finland',f:'🇫🇮',c:'+358',iso:'FI'},
+  {n:'France',f:'🇫🇷',c:'+33',iso:'FR'},
+  {n:'French Guiana',f:'🇬🇫',c:'+594',iso:'GF'},
+  {n:'French Polynesia',f:'🇵🇫',c:'+689',iso:'PF'},
+  {n:'Gabon',f:'🇬🇦',c:'+241',iso:'GA'},
+  {n:'Gambia',f:'🇬🇲',c:'+220',iso:'GM'},
+  {n:'Georgia',f:'🇬🇪',c:'+995',iso:'GE'},
+  {n:'Germany',f:'🇩🇪',c:'+49',iso:'DE'},
+  {n:'Ghana',f:'🇬🇭',c:'+233',iso:'GH'},
+  {n:'Gibraltar',f:'🇬🇮',c:'+350',iso:'GI'},
+  {n:'Greece',f:'🇬🇷',c:'+30',iso:'GR'},
+  {n:'Greenland',f:'🇬🇱',c:'+299',iso:'GL'},
+  {n:'Grenada',f:'🇬🇩',c:'+1',iso:'GD'},
+  {n:'Guadeloupe',f:'🇬🇵',c:'+590',iso:'GP'},
+  {n:'Guam',f:'🇬🇺',c:'+1',iso:'GU'},
+  {n:'Guatemala',f:'🇬🇹',c:'+502',iso:'GT'},
+  {n:'Guernsey',f:'🇬🇬',c:'+44',iso:'GG'},
+  {n:'Guinea',f:'🇬🇳',c:'+224',iso:'GN'},
+  {n:'Guinea-Bissau',f:'🇬🇼',c:'+245',iso:'GW'},
+  {n:'Guyana',f:'🇬🇾',c:'+592',iso:'GY'},
+  {n:'Haiti',f:'🇭🇹',c:'+509',iso:'HT'},
+  {n:'Honduras',f:'🇭🇳',c:'+504',iso:'HN'},
+  {n:'Hong Kong SAR China',f:'🇭🇰',c:'+852',iso:'HK'},
+  {n:'Hungary',f:'🇭🇺',c:'+36',iso:'HU'},
+  {n:'Iceland',f:'🇮🇸',c:'+354',iso:'IS'},
+  {n:'India',f:'🇮🇳',c:'+91',iso:'IN'},
+  {n:'Indonesia',f:'🇮🇩',c:'+62',iso:'ID'},
+  {n:'Iran',f:'🇮🇷',c:'+98',iso:'IR'},
+  {n:'Iraq',f:'🇮🇶',c:'+964',iso:'IQ'},
+  {n:'Ireland',f:'🇮🇪',c:'+353',iso:'IE'},
+  {n:'Isle of Man',f:'🇮🇲',c:'+44',iso:'IM'},
+  {n:'Israel',f:'🇮🇱',c:'+972',iso:'IL'},
+  {n:'Italy',f:'🇮🇹',c:'+39',iso:'IT'},
+  {n:'Jamaica',f:'🇯🇲',c:'+1',iso:'JM'},
+  {n:'Japan',f:'🇯🇵',c:'+81',iso:'JP'},
+  {n:'Jersey',f:'🇯🇪',c:'+44',iso:'JE'},
+  {n:'Jordan',f:'🇯🇴',c:'+962',iso:'JO'},
+  {n:'Kazakhstan',f:'🇰🇿',c:'+7',iso:'KZ'},
+  {n:'Kenya',f:'🇰🇪',c:'+254',iso:'KE'},
+  {n:'Kiribati',f:'🇰🇮',c:'+686',iso:'KI'},
+  {n:'Kosovo',f:'🇽🇰',c:'+383',iso:'XK'},
+  {n:'Kuwait',f:'🇰🇼',c:'+965',iso:'KW'},
+  {n:'Kyrgyzstan',f:'🇰🇬',c:'+996',iso:'KG'},
+  {n:'Laos',f:'🇱🇦',c:'+856',iso:'LA'},
+  {n:'Latvia',f:'🇱🇻',c:'+371',iso:'LV'},
+  {n:'Lebanon',f:'🇱🇧',c:'+961',iso:'LB'},
+  {n:'Lesotho',f:'🇱🇸',c:'+266',iso:'LS'},
+  {n:'Liberia',f:'🇱🇷',c:'+231',iso:'LR'},
+  {n:'Libya',f:'🇱🇾',c:'+218',iso:'LY'},
+  {n:'Liechtenstein',f:'🇱🇮',c:'+423',iso:'LI'},
+  {n:'Lithuania',f:'🇱🇹',c:'+370',iso:'LT'},
+  {n:'Luxembourg',f:'🇱🇺',c:'+352',iso:'LU'},
+  {n:'Macao SAR China',f:'🇲🇴',c:'+853',iso:'MO'},
+  {n:'Madagascar',f:'🇲🇬',c:'+261',iso:'MG'},
+  {n:'Malawi',f:'🇲🇼',c:'+265',iso:'MW'},
+  {n:'Malaysia',f:'🇲🇾',c:'+60',iso:'MY'},
+  {n:'Maldives',f:'🇲🇻',c:'+960',iso:'MV'},
+  {n:'Mali',f:'🇲🇱',c:'+223',iso:'ML'},
+  {n:'Malta',f:'🇲🇹',c:'+356',iso:'MT'},
+  {n:'Marshall Islands',f:'🇲🇭',c:'+692',iso:'MH'},
+  {n:'Martinique',f:'🇲🇶',c:'+596',iso:'MQ'},
+  {n:'Mauritania',f:'🇲🇷',c:'+222',iso:'MR'},
+  {n:'Mauritius',f:'🇲🇺',c:'+230',iso:'MU'},
+  {n:'Mayotte',f:'🇾🇹',c:'+262',iso:'YT'},
+  {n:'Mexico',f:'🇲🇽',c:'+52',iso:'MX'},
+  {n:'Micronesia',f:'🇫🇲',c:'+691',iso:'FM'},
+  {n:'Moldova',f:'🇲🇩',c:'+373',iso:'MD'},
+  {n:'Monaco',f:'🇲🇨',c:'+377',iso:'MC'},
+  {n:'Mongolia',f:'🇲🇳',c:'+976',iso:'MN'},
+  {n:'Montenegro',f:'🇲🇪',c:'+382',iso:'ME'},
+  {n:'Montserrat',f:'🇲🇸',c:'+1',iso:'MS'},
+  {n:'Morocco',f:'🇲🇦',c:'+212',iso:'MA'},
+  {n:'Mozambique',f:'🇲🇿',c:'+258',iso:'MZ'},
+  {n:'Myanmar (Burma)',f:'🇲🇲',c:'+95',iso:'MM'},
+  {n:'Namibia',f:'🇳🇦',c:'+264',iso:'NA'},
+  {n:'Nauru',f:'🇳🇷',c:'+674',iso:'NR'},
+  {n:'Nepal',f:'🇳🇵',c:'+977',iso:'NP'},
+  {n:'Netherlands',f:'🇳🇱',c:'+31',iso:'NL'},
+  {n:'New Caledonia',f:'🇳🇨',c:'+687',iso:'NC'},
+  {n:'New Zealand',f:'🇳🇿',c:'+64',iso:'NZ'},
+  {n:'Nicaragua',f:'🇳🇮',c:'+505',iso:'NI'},
+  {n:'Niger',f:'🇳🇪',c:'+227',iso:'NE'},
+  {n:'Nigeria',f:'🇳🇬',c:'+234',iso:'NG'},
+  {n:'Niue',f:'🇳🇺',c:'+683',iso:'NU'},
+  {n:'Norfolk Island',f:'🇳🇫',c:'+672',iso:'NF'},
+  {n:'North Korea',f:'🇰🇵',c:'+850',iso:'KP'},
+  {n:'North Macedonia',f:'🇲🇰',c:'+389',iso:'MK'},
+  {n:'Northern Mariana Islands',f:'🇲🇵',c:'+1',iso:'MP'},
+  {n:'Norway',f:'🇳🇴',c:'+47',iso:'NO'},
+  {n:'Oman',f:'🇴🇲',c:'+968',iso:'OM'},
+  {n:'Pakistan',f:'🇵🇰',c:'+92',iso:'PK'},
+  {n:'Palau',f:'🇵🇼',c:'+680',iso:'PW'},
+  {n:'Palestinian Territories',f:'🇵🇸',c:'+970',iso:'PS'},
+  {n:'Papua New Guinea',f:'🇵🇬',c:'+675',iso:'PG'},
+  {n:'Paraguay',f:'🇵🇾',c:'+595',iso:'PY'},
+  {n:'Peru',f:'🇵🇪',c:'+51',iso:'PE'},
+  {n:'Philippines',f:'🇵🇭',c:'+63',iso:'PH'},
+  {n:'Poland',f:'🇵🇱',c:'+48',iso:'PL'},
+  {n:'Portugal',f:'🇵🇹',c:'+351',iso:'PT'},
+  {n:'Puerto Rico',f:'🇵🇷',c:'+1',iso:'PR'},
+  {n:'Qatar',f:'🇶🇦',c:'+974',iso:'QA'},
+  {n:'Réunion',f:'🇷🇪',c:'+262',iso:'RE'},
+  {n:'Romania',f:'🇷🇴',c:'+40',iso:'RO'},
+  {n:'Russia',f:'🇷🇺',c:'+7',iso:'RU'},
+  {n:'Rwanda',f:'🇷🇼',c:'+250',iso:'RW'},
+  {n:'Samoa',f:'🇼🇸',c:'+685',iso:'WS'},
+  {n:'San Marino',f:'🇸🇲',c:'+378',iso:'SM'},
+  {n:'São Tomé & Príncipe',f:'🇸🇹',c:'+239',iso:'ST'},
+  {n:'Saudi Arabia',f:'🇸🇦',c:'+966',iso:'SA'},
+  {n:'Senegal',f:'🇸🇳',c:'+221',iso:'SN'},
+  {n:'Serbia',f:'🇷🇸',c:'+381',iso:'RS'},
+  {n:'Seychelles',f:'🇸🇨',c:'+248',iso:'SC'},
+  {n:'Sierra Leone',f:'🇸🇱',c:'+232',iso:'SL'},
+  {n:'Singapore',f:'🇸🇬',c:'+65',iso:'SG'},
+  {n:'Sint Maarten',f:'🇸🇽',c:'+1',iso:'SX'},
+  {n:'Slovakia',f:'🇸🇰',c:'+421',iso:'SK'},
+  {n:'Slovenia',f:'🇸🇮',c:'+386',iso:'SI'},
+  {n:'Solomon Islands',f:'🇸🇧',c:'+677',iso:'SB'},
+  {n:'Somalia',f:'🇸🇴',c:'+252',iso:'SO'},
+  {n:'South Africa',f:'🇿🇦',c:'+27',iso:'ZA'},
+  {n:'South Korea',f:'🇰🇷',c:'+82',iso:'KR'},
+  {n:'South Sudan',f:'🇸🇸',c:'+211',iso:'SS'},
+  {n:'Spain',f:'🇪🇸',c:'+34',iso:'ES'},
+  {n:'Sri Lanka',f:'🇱🇰',c:'+94',iso:'LK'},
+  {n:'St. Barthélemy',f:'🇧🇱',c:'+590',iso:'BL'},
+  {n:'St. Helena',f:'🇸🇭',c:'+290',iso:'SH'},
+  {n:'St. Kitts & Nevis',f:'🇰🇳',c:'+1',iso:'KN'},
+  {n:'St. Lucia',f:'🇱🇨',c:'+1',iso:'LC'},
+  {n:'St. Martin',f:'🇲🇫',c:'+590',iso:'MF'},
+  {n:'St. Pierre & Miquelon',f:'🇵🇲',c:'+508',iso:'PM'},
+  {n:'St. Vincent & Grenadines',f:'🇻🇨',c:'+1',iso:'VC'},
+  {n:'Sudan',f:'🇸🇩',c:'+249',iso:'SD'},
+  {n:'Suriname',f:'🇸🇷',c:'+597',iso:'SR'},
+  {n:'Svalbard & Jan Mayen',f:'🇸🇯',c:'+47',iso:'SJ'},
+  {n:'Sweden',f:'🇸🇪',c:'+46',iso:'SE'},
+  {n:'Switzerland',f:'🇨🇭',c:'+41',iso:'CH'},
+  {n:'Syria',f:'🇸🇾',c:'+963',iso:'SY'},
+  {n:'Taiwan',f:'🇹🇼',c:'+886',iso:'TW'},
+  {n:'Tajikistan',f:'🇹🇯',c:'+992',iso:'TJ'},
+  {n:'Tanzania',f:'🇹🇿',c:'+255',iso:'TZ'},
+  {n:'Thailand',f:'🇹🇭',c:'+66',iso:'TH'},
+  {n:'Timor-Leste',f:'🇹🇱',c:'+670',iso:'TL'},
+  {n:'Togo',f:'🇹🇬',c:'+228',iso:'TG'},
+  {n:'Tokelau',f:'🇹🇰',c:'+690',iso:'TK'},
+  {n:'Tonga',f:'🇹🇴',c:'+676',iso:'TO'},
+  {n:'Trinidad & Tobago',f:'🇹🇹',c:'+1',iso:'TT'},
+  {n:'Tunisia',f:'🇹🇳',c:'+216',iso:'TN'},
+  {n:'Turkey',f:'🇹🇷',c:'+90',iso:'TR'},
+  {n:'Turkmenistan',f:'🇹🇲',c:'+993',iso:'TM'},
+  {n:'Turks & Caicos Islands',f:'🇹🇨',c:'+1',iso:'TC'},
+  {n:'Tuvalu',f:'🇹🇻',c:'+688',iso:'TV'},
+  {n:'U.S. Virgin Islands',f:'🇻🇮',c:'+1',iso:'VI'},
+  {n:'Uganda',f:'🇺🇬',c:'+256',iso:'UG'},
+  {n:'Ukraine',f:'🇺🇦',c:'+380',iso:'UA'},
+  {n:'United Arab Emirates',f:'🇦🇪',c:'+971',iso:'AE'},
+  {n:'United Kingdom',f:'🇬🇧',c:'+44',iso:'GB'},
+  {n:'United States',f:'🇺🇸',c:'+1',iso:'US'},
+  {n:'Uruguay',f:'🇺🇾',c:'+598',iso:'UY'},
+  {n:'Uzbekistan',f:'🇺🇿',c:'+998',iso:'UZ'},
+  {n:'Vanuatu',f:'🇻🇺',c:'+678',iso:'VU'},
+  {n:'Vatican City',f:'🇻🇦',c:'+39',iso:'VA'},
+  {n:'Venezuela',f:'🇻🇪',c:'+58',iso:'VE'},
+  {n:'Vietnam',f:'🇻🇳',c:'+84',iso:'VN'},
+  {n:'Wallis & Futuna',f:'🇼🇫',c:'+681',iso:'WF'},
+  {n:'Western Sahara',f:'🇪🇭',c:'+212',iso:'EH'},
+  {n:'Yemen',f:'🇾🇪',c:'+967',iso:'YE'},
+  {n:'Zambia',f:'🇿🇲',c:'+260',iso:'ZM'},
+  {n:'Zimbabwe',f:'🇿🇼',c:'+263',iso:'ZW'},
+];
+
+let selCountry=COUNTRIES[0];
+
+function renderList(q=''){
+  const list=document.getElementById('country-list');
+  list.innerHTML='';
+  const f=q?COUNTRIES.filter(c=>c.n.toLowerCase().includes(q.toLowerCase())||c.c.includes(q)):COUNTRIES;
+  f.forEach(c=>{
+    const el=document.createElement('div');
+    el.className='country-item'+(c.iso===selCountry.iso?' active':'');
+    el.innerHTML='<span class="ci-flag">'+c.f+'</span><span class="ci-name">'+c.n+'</span><span class="ci-code">'+c.c+'</span>';
+    el.addEventListener('click',()=>pickCountry(c));
+    list.appendChild(el);
+  });
+}
+
+function pickCountry(c){
+  selCountry=c;
+  document.getElementById('sel-flag').textContent=c.f;
+  document.getElementById('sel-code').textContent=c.c;
+  closeDd();
+}
+
+function closeDd(){
+  document.getElementById('country-dd').classList.remove('open');
+  document.getElementById('country-search').value='';
+  renderList();
+}
+
+document.getElementById('country-btn').addEventListener('click',e=>{
+  e.stopPropagation();
+  const dd=document.getElementById('country-dd');
+  dd.classList.toggle('open');
+  if(dd.classList.contains('open')){
+    renderList();
+    setTimeout(()=>document.getElementById('country-search').focus(),50);
+    const active=document.querySelector('.country-item.active');
+    if(active)active.scrollIntoView({block:'center'});
+  }
+});
+
+document.getElementById('country-search').addEventListener('input',e=>renderList(e.target.value));
+document.addEventListener('click',e=>{if(!e.target.closest('.phone-wrap'))closeDd();});
+
+async function detectCountry(){
+  try{
+    const r=await fetch('https://ipapi.co/json/');
+    const d=await r.json();
+    const found=COUNTRIES.find(c=>c.iso===d.country_code);
+    if(found)pickCountry(found);
+  }catch(e){}
+}
+
+const today=new Date();today.setHours(0,0,0,0);
+const minD=new Date(today);minD.setDate(today.getDate()+1);
+const maxD=new Date(today);maxD.setDate(today.getDate()+30);
+let viewD=new Date(today.getFullYear(),today.getMonth(),1);
+let selDate=null,selSlot=null;
+
+function isSameDay(a,b){return a&&b&&a.toDateString()===b.toDateString();}
+function isOff(d){const day=d.getDay();return d<minD||d>maxD||day===0||day===6;}
+function fmtDate(d){return DAYS_L[d.getDay()]+', '+d.getDate()+' de '+MONTHS[d.getMonth()];}
+
+function renderCal(){
+  const y=viewD.getFullYear(),m=viewD.getMonth();
+  document.getElementById('cal-title').textContent=MONTHS[m]+' '+y;
+  const g=document.getElementById('cal-grid');g.innerHTML='';
+  DAYS_S.forEach(d=>{const e=document.createElement('div');e.className='cal-day-name';e.textContent=d;g.appendChild(e);});
+  let s=new Date(y,m,1).getDay()-1;if(s<0)s=6;
+  for(let i=0;i<s;i++){const e=document.createElement('div');e.className='cal-day empty';g.appendChild(e);}
+  const total=new Date(y,m+1,0).getDate();
+  for(let d=1;d<=total;d++){
+    const date=new Date(y,m,d);
+    const e=document.createElement('div');
+    e.className='cal-day'+(isOff(date)?' disabled':'')+(isSameDay(date,selDate)?' selected':'');
+    e.textContent=d;
+    if(!isOff(date))e.addEventListener('click',()=>pickDate(new Date(y,m,d)));
+    g.appendChild(e);
+  }
+}
+
+function pickDate(date){
+  selDate=date;selSlot=null;
+  const label=fmtDate(date);
+  document.getElementById('b1').innerHTML='<strong>'+label+'</strong>';
+  document.getElementById('b2').innerHTML='<strong>'+label+'</strong>';
+  renderSlots();goStep(2);
+}
+
+function renderSlots(){
+  renderGroup('morning-slots',MORNING);
+  renderGroup('afternoon-slots',AFTERNOON);
+}
+
+function renderGroup(id,slots){
+  const g=document.getElementById(id);g.innerHTML='';
+  slots.forEach(s=>{
+    const e=document.createElement('div');
+    e.className='slot'+(s===selSlot?' selected':'');
+    e.textContent=s;
+    e.addEventListener('click',()=>{
+      selSlot=s;
+      document.querySelectorAll('.slot').forEach(b=>b.classList.remove('selected'));
+      e.classList.add('selected');
+      document.getElementById('b1').innerHTML='<strong>'+fmtDate(selDate)+'</strong>&nbsp;&nbsp;'+s;
+      document.getElementById('b2').innerHTML='<strong>'+fmtDate(selDate)+'</strong>&nbsp;&nbsp;'+s;
+      setTimeout(()=>goStep(3),200);
+    });
+    g.appendChild(e);
+  });
+}
+
+function goStep(n){
+  document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
+  document.getElementById('step'+n).classList.add('active');
+  for(let i=1;i<=3;i++)document.getElementById('p'+i).classList.toggle('done',i<=n);
+  if(n===3)checkFields();
+}
+
+function checkFields(){
+  const ok=document.getElementById('nombre').value.trim()!==''&&
+    document.getElementById('email').value.trim()!==''&&
+    document.getElementById('telefono').value.trim()!=='';
+  document.getElementById('submit-btn').disabled=!ok;
+}
+
+['nombre','email','telefono'].forEach(id=>document.getElementById(id).addEventListener('input',checkFields));
+document.getElementById('prev-m').addEventListener('click',()=>{viewD=new Date(viewD.getFullYear(),viewD.getMonth()-1,1);renderCal();});
+document.getElementById('next-m').addEventListener('click',()=>{viewD=new Date(viewD.getFullYear(),viewD.getMonth()+1,1);renderCal();});
+
+function handleSubmit(){
+  const n=document.getElementById('nombre').value;
+  const e=document.getElementById('email').value;
+  const t=document.getElementById('telefono').value;
+  document.getElementById('summary').innerHTML='<strong>'+n+'</strong>'+fmtDate(selDate)+' · '+selSlot+'<br>'+e+'<br>'+selCountry.f+' '+selCountry.c+' '+t;
+  goStep(4);document.getElementById('p3').classList.add('done');
+}
+
+renderCal();
+renderList();
+detectCountry();
+</script>
+</body>
+</html>
